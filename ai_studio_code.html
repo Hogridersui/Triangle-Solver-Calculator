@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Trigonometric Triangle Solver</title>
+  <style>
+    :root {
+      --bg-color: #05070c;
+      --card-bg: rgba(13, 16, 26, 0.88);
+      --card-border: rgba(0, 229, 255, 0.28);
+      --card-glow: rgba(0, 229, 255, 0.14);
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.4);
+      --solved-color: #39ff14;
+      --solved-bg: rgba(57, 255, 20, 0.12);
+      --text-main: #ffffff;
+      --text-muted: #9aa5b8;
+      --raw-text: #b0c2de;
+      --error-bg: #2b0b11;
+      --error-border: #ff3355;
+    }
+
+    * { box-sizing: border-box; transition: all 0.2s ease; }
+
+    /* Blueprint Grid Background with Radial Turquoise Glow */
+    body {
+      background-color: var(--bg-color);
+      background-image:
+        radial-gradient(circle at 50% 28%, rgba(0, 229, 255, 0.14) 0%, rgba(0, 229, 255, 0.03) 45%, transparent 75%),
+        linear-gradient(rgba(0, 229, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+      background-size:
+        100% 100%,
+        100px 100px,
+        100px 100px,
+        20px 20px,
+        20px 20px;
+      background-position:
+        center top,
+        -1px -1px,
+        -1px -1px,
+        -1px -1px,
+        -1px -1px;
+      color: var(--text-main);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 15px;
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin: 0 0 6px 0;
+      font-size: 30px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      margin: 0 0 25px 0;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 740px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* Glowing Card Styling */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 0 22px var(--card-glow), 0 8px 30px rgba(0, 0, 0, 0.7);
+    }
+    .card:hover {
+      border-color: rgba(0, 229, 255, 0.45);
+      box-shadow: 0 0 30px rgba(0, 229, 255, 0.22), 0 10px 35px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    select, button {
+      background: #151824;
+      color: #fff;
+      border: 1px solid var(--card-border);
+      padding: 10px 18px;
+      font-size: 14px;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus, button:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    button.calc-btn {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    button.calc-btn:hover {
+      background: #38edff;
+      transform: translateY(-2px);
+      box-shadow: 0 0 24px rgba(0, 229, 255, 0.6);
+    }
+    button.clear-btn { background: #222638; }
+
+    /* SVG Canvas Area */
+    .canvas-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .svg-wrapper {
+      width: 100%;
+      height: 290px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Diagram Labels with Halo Stroke to Prevent Phase-In */
+    .diag-label {
+      font-size: 15px;
+      font-weight: 700;
+      fill: var(--accent);
+      text-anchor: middle;
+      dominant-baseline: central;
+      paint-order: stroke fill;
+      stroke: var(--bg-color);
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+    .diag-vertex {
+      font-size: 15px;
+      font-weight: 800;
+      fill: #ffffff;
+      paint-order: stroke fill;
+      stroke: var(--bg-color);
+      stroke-width: 5px;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    /* Input Grid */
+    .inputs-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+    .input-field {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-field label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge-solved {
+      font-size: 11px;
+      font-weight: bold;
+      background: var(--solved-bg);
+      color: var(--solved-color);
+      border: 1px solid rgba(57, 255, 20, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: none;
+    }
+    .input-field input {
+      background: #080a12;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .input-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 14px var(--accent-glow);
+    }
+    .input-field input.calculated {
+      border-color: var(--solved-color);
+      color: var(--solved-color);
+      background: rgba(57, 255, 20, 0.05);
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+    }
+
+    /* Error Message Box */
+    .error-box {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: #ff758f;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 0 15px rgba(255, 51, 85, 0.2);
+      display: none;
+    }
+
+    /* Output Section */
+    .output-item {
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .output-item:last-child { border-bottom: none; }
+    .output-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .output-value {
+      font-size: 18px;
+      line-height: 1.9;
+    }
+    .val-highlight {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 19px;
+    }
+    .val-raw {
+      color: var(--raw-text);
+      font-weight: 700;
+      font-size: 15px;
+      margin-right: 14px;
+      margin-left: 3px;
+    }
+    .inline-solved {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--solved-color);
+      background: var(--solved-bg);
+      border: 1px solid rgba(57, 255, 20, 0.35);
+      padding: 1px 7px;
+      border-radius: 4px;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+
+    .tag-right-angle {
+      display: inline-block;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffd166;
+      background: rgba(255, 209, 102, 0.12);
+      border: 1px solid rgba(255, 209, 102, 0.35);
+      padding: 5px 12px;
+      border-radius: 6px;
+      box-shadow: 0 0 12px rgba(255, 209, 102, 0.15);
+    }
+
+    /* Expandable Steps Card */
+    .steps-btn {
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--card-border);
+      text-align: left;
+      padding: 14px 18px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      border-radius: 10px;
+      box-shadow: 0 0 15px var(--card-glow);
+    }
+    .steps-content {
+      display: none;
+      margin-top: 10px;
+      background: #090a12;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #d1d8e6;
+    }
+    .steps-content ol { margin: 0; padding-left: 20px; }
+    .steps-content li { margin-bottom: 9px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div>
+    <h1>Triangle Calculator & Solver</h1>
+    <p class="subtitle">Trigonometric Rules, Dynamic Geometry & Step-by-Step Proofs</p>
+  </div>
+
+  <div class="card controls">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <label for="caseSelect" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Mode:</label>
+      <select id="caseSelect" onchange="handleCaseChange()">
+        <option value="custom">Auto-Detect Case</option>
+        <option value="SSS">SSS (3 Sides)</option>
+        <option value="SAS">SAS (2 Sides, Included Angle)</option>
+        <option value="ASA">ASA / AAS (2 Angles, 1 Side)</option>
+        <option value="SSA">SSA (2 Sides, Non-Included Angle)</option>
+      </select>
+    </div>
+    <div>
+      <button class="calc-btn" onclick="calculateTriangle()">Calculate</button>
+      <button class="clear-btn" onclick="clearAll()">Reset</button>
+    </div>
+  </div>
+
+  <div id="errorBox" class="error-box"></div>
+
+  <!-- Dynamic SVG Geometric Diagram -->
+  <div class="card canvas-card">
+    <div class="svg-wrapper">
+      <svg id="triangleSvg" viewBox="0 0 460 290">
+        <!-- Generated Dynamically -->
+      </svg>
+    </div>
+  </div>
+
+  <!-- Synchronized Inputs Grid -->
+  <div class="card inputs-grid">
+    <div class="input-field">
+      <label>Side a (opposite A) <span id="badge-a" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-a" placeholder="e.g. 5">
+    </div>
+    <div class="input-field">
+      <label>Side b (opposite B) <span id="badge-b" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-b" placeholder="e.g. 6">
+    </div>
+    <div class="input-field">
+      <label>Side c (opposite C) <span id="badge-c" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-c" placeholder="e.g. 7">
+    </div>
+    <div class="input-field">
+      <label>Angle A (°) <span id="badge-A" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-A" placeholder="e.g. 45">
+    </div>
+    <div class="input-field">
+      <label>Angle B (°) <span id="badge-B" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-B" placeholder="e.g. 60">
+    </div>
+    <div class="input-field">
+      <label>Angle C (°) <span id="badge-C" class="badge-solved">SOLVED</span></label>
+      <input type="number" step="any" id="input-C" placeholder="e.g. 75">
+    </div>
+  </div>
+
+  <!-- Output Results Card -->
+  <div class="card">
+    <div class="output-item">
+      <div class="output-label">Sides:</div>
+      <div class="output-value" id="out-sides">Awaiting calculation...</div>
+    </div>
+    <div class="output-item">
+      <div class="output-label">Angles:</div>
+      <div class="output-value" id="out-angles">Awaiting calculation...</div>
+    </div>
+    <div class="output-item">
+      <div class="output-label">Area & Dimensions:</div>
+      <div class="output-value" id="out-area">Awaiting calculation...</div>
+    </div>
+  </div>
+
+  <!-- Expandable Step-by-Step Mathematical Steps -->
+  <div>
+    <button class="steps-btn" onclick="toggleSteps()">
+      <span>Show Step-by-Step Math Proof</span>
+      <span id="steps-chevron">▼</span>
+    </button>
+    <div class="steps-content" id="stepsContent">
+      <ol id="stepsList">
+        <li>Provide at least 3 values and click <strong>Calculate</strong> to view steps.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+  const toRad = deg => deg * (Math.PI / 180);
+  const toDeg = rad => rad * (180 / Math.PI);
+  const clamp = val => Math.max(-1, Math.min(1, val));
+  const fmtSigFig = num => (num === null || isNaN(num)) ? "N/A" : parseFloat(num.toPrecision(3)).toString();
+  const fmtAngle = num => (num === null || isNaN(num)) ? "N/A" : num.toFixed(1) + "°";
+
+  let steps = [];
+
+  window.onload = () => drawDynamicTriangle(5, 5, 5, 60, 60, 60);
+
+  function clearAll() {
+    ['a', 'b', 'c', 'A', 'B', 'C'].forEach(id => {
+      const inp = document.getElementById('input-' + id);
+      inp.value = '';
+      inp.disabled = false;
+      inp.classList.remove('calculated');
+      document.getElementById('badge-' + id).style.display = 'none';
+    });
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('out-sides').innerHTML = 'Awaiting calculation...';
+    document.getElementById('out-angles').innerHTML = 'Awaiting calculation...';
+    document.getElementById('out-area').innerHTML = 'Awaiting calculation...';
+    document.getElementById('caseSelect').value = 'custom';
+    document.getElementById('stepsList').innerHTML = '<li>Provide at least 3 values and click <strong>Calculate</strong> to view steps.</li>';
+    drawDynamicTriangle(5, 5, 5, 60, 60, 60);
+  }
+
+  function handleCaseChange() {
+    const mode = document.getElementById('caseSelect').value;
+    ['a', 'b', 'c', 'A', 'B', 'C'].forEach(id => document.getElementById('input-' + id).disabled = false);
+
+    if (mode === 'SSS') {
+      ['A', 'B', 'C'].forEach(id => {
+        document.getElementById('input-' + id).disabled = true;
+        document.getElementById('input-' + id).value = '';
+      });
+    } else if (mode === 'SAS') {
+      ['c', 'A', 'B'].forEach(id => {
+        document.getElementById('input-' + id).disabled = true;
+        document.getElementById('input-' + id).value = '';
+      });
+    }
+  }
+
+  function toggleSteps() {
+    const content = document.getElementById('stepsContent');
+    const chevron = document.getElementById('steps-chevron');
+    if (content.style.display === 'block') {
+      content.style.display = 'none';
+      chevron.innerText = '▼';
+    } else {
+      content.style.display = 'block';
+      chevron.innerText = '▲';
+    }
+  }
+
+  function getVal(id) {
+    const v = document.getElementById('input-' + id).value;
+    return (v !== '' && !isNaN(v)) ? parseFloat(v) : null;
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('errorBox');
+    box.innerText = msg;
+    box.style.display = 'block';
+  }
+
+  function calculateTriangle() {
+    const errBox = document.getElementById('errorBox');
+    errBox.style.display = 'none';
+    steps = [];
+
+    const userInputs = {
+      a: getVal('a'), b: getVal('b'), c: getVal('c'),
+      A: getVal('A'), B: getVal('B'), C: getVal('C')
+    };
+
+    let a = userInputs.a, b = userInputs.b, c = userInputs.c;
+    let A = userInputs.A, B = userInputs.B, C = userInputs.C;
+
+    for (let [k, s] of Object.entries({a, b, c})) {
+      if (s !== null && s <= 0) {
+        showError(`Validation Error: Side ${k} must be strictly greater than 0.`);
+        return;
+      }
+    }
+    for (let [k, ang] of Object.entries({A, B, C})) {
+      if (ang !== null && (ang <= 0 || ang >= 180)) {
+        showError(`Validation Error: Angle ${k} must be between 0° and 180°.`);
+        return;
+      }
+    }
+
+    let angleCount = (A ? 1 : 0) + (B ? 1 : 0) + (C ? 1 : 0);
+    let sideCount = (a ? 1 : 0) + (b ? 1 : 0) + (c ? 1 : 0);
+
+    if (angleCount === 2) {
+      let sum2 = (A || 0) + (B || 0) + (C || 0);
+      if (sum2 >= 180) {
+        showError("Angle Sum Error: The sum of two given angles must be strictly less than 180°.");
+        return;
+      }
+      if (!A) { A = 180 - B - C; steps.push(`Calculated missing ∠A = 180° - (${B}° + ${C}°) = <strong>${A.toFixed(2)}°</strong>`); }
+      else if (!B) { B = 180 - A - C; steps.push(`Calculated missing ∠B = 180° - (${A}° + ${C}°) = <strong>${B.toFixed(2)}°</strong>`); }
+      else if (!C) { C = 180 - A - B; steps.push(`Calculated missing ∠C = 180° - (${A}° + ${B}°) = <strong>${C.toFixed(2)}°</strong>`); }
+      angleCount = 3;
+    } else if (angleCount === 3) {
+      let sum3 = A + B + C;
+      if (Math.abs(sum3 - 180) > 1.0) {
+        showError(`Angle Sum Error: Angles must add up to 180° (Current sum: ${sum3.toFixed(1)}°).`);
+        return;
+      }
+      steps.push(`Verified that given angles sum to 180° (${A}° + ${B}° + ${C}° = 180°).`);
+    }
+
+    if ((sideCount + angleCount) < 3 || sideCount === 0) {
+      showError("Insufficient Data: Please supply at least 3 values (including at least 1 side length).");
+      return;
+    }
+
+    try {
+      // SSS
+      if (sideCount === 3) {
+        if (a + b <= c || a + c <= b || b + c <= a) {
+          showError("Triangle Inequality Violation: The sum of any two sides must be strictly greater than the third side.");
+          return;
+        }
+        steps.push(`Identified Case: <strong>SSS</strong> (Side-Side-Side).`);
+        steps.push(`Applied Cosine Rule: cos(A) = (${b}² + ${c}² - ${a}²) / (2 × ${b} × ${c}).`);
+        A = toDeg(Math.acos(clamp((b*b + c*c - a*a) / (2 * b * c))));
+        steps.push(`Solved ∠A = <strong>${A.toFixed(2)}°</strong>`);
+
+        B = toDeg(Math.acos(clamp((a*a + c*c - b*b) / (2 * a * c))));
+        steps.push(`Solved ∠B = <strong>${B.toFixed(2)}°</strong>`);
+
+        C = 180 - A - B;
+        steps.push(`Solved remaining ∠C = 180° - (${A.toFixed(1)}° + ${B.toFixed(1)}°) = <strong>${C.toFixed(2)}°</strong>`);
+      }
+
+      // ASA / AAS
+      else if (angleCount === 3 && sideCount >= 1) {
+        steps.push(`Identified Case: <strong>ASA / AAS</strong>. Applying Sine Rule.`);
+        let ratio = a ? (a / Math.sin(toRad(A))) : (b ? (b / Math.sin(toRad(B))) : (c / Math.sin(toRad(C))));
+        steps.push(`Sine Rule constant ratio: side / sin(Angle) = <strong>${ratio.toFixed(3)}</strong>.`);
+
+        if (!a) { a = ratio * Math.sin(toRad(A)); steps.push(`Solved side a = <strong>${a.toFixed(3)}</strong>.`); }
+        if (!b) { b = ratio * Math.sin(toRad(B)); steps.push(`Solved side b = <strong>${b.toFixed(3)}</strong>.`); }
+        if (!c) { c = ratio * Math.sin(toRad(C)); steps.push(`Solved side c = <strong>${c.toFixed(3)}</strong>.`); }
+      }
+
+      // SAS
+      else if ((a && b && C) || (a && c && B) || (b && c && A)) {
+        steps.push(`Identified Case: <strong>SAS</strong> (Side-Angle-Side).`);
+        if (a && b && C) {
+          steps.push(`Applied Cosine Rule: c = √(a² + b² - 2ab cos(C)).`);
+          c = Math.sqrt(a*a + b*b - 2*a*b*Math.cos(toRad(C)));
+          A = toDeg(Math.acos(clamp((b*b + c*c - a*a) / (2 * b * c))));
+          B = 180 - A - C;
+        } else if (a && c && B) {
+          steps.push(`Applied Cosine Rule: b = √(a² + c² - 2ac cos(B)).`);
+          b = Math.sqrt(a*a + c*c - 2*a*c*Math.cos(toRad(B)));
+          A = toDeg(Math.acos(clamp((b*b + c*c - a*a) / (2 * b * c))));
+          C = 180 - A - B;
+        } else {
+          steps.push(`Applied Cosine Rule: a = √(b² + c² - 2bc cos(A)).`);
+          a = Math.sqrt(b*b + c*c - 2*b*c*Math.cos(toRad(A)));
+          B = toDeg(Math.acos(clamp((a*a + c*c - b*b) / (2 * a * c))));
+          C = 180 - A - B;
+        }
+        steps.push(`Solved missing sides and angles.`);
+      }
+
+      // SSA
+      else if (sideCount === 2 && angleCount >= 1) {
+        steps.push(`Identified Case: <strong>SSA</strong> (Ambiguous Case). Using Sine Rule.`);
+        if (a && b && A) {
+          let sinB = (b * Math.sin(toRad(A))) / a;
+          if (sinB > 1) { showError("No valid triangle exists for these inputs (sin B > 1)."); return; }
+          B = toDeg(Math.asin(sinB));
+          C = 180 - A - B;
+          c = (a * Math.sin(toRad(C))) / Math.sin(toRad(A));
+        } else if (a && b && B) {
+          let sinA = (a * Math.sin(toRad(B))) / b;
+          if (sinA > 1) { showError("No valid triangle exists for these inputs (sin A > 1)."); return; }
+          A = toDeg(Math.asin(sinA));
+          C = 180 - A - B;
+          c = (b * Math.sin(toRad(C))) / Math.sin(toRad(B));
+        } else if (b && c && B) {
+          let sinC = (c * Math.sin(toRad(B))) / b;
+          if (sinC > 1) { showError("No valid triangle exists for these inputs (sin C > 1)."); return; }
+          C = toDeg(Math.asin(sinC));
+          A = 180 - B - C;
+          a = (b * Math.sin(toRad(A))) / Math.sin(toRad(B));
+        } else if (b && c && C) {
+          let sinB = (b * Math.sin(toRad(C))) / c;
+          if (sinB > 1) { showError("No valid triangle exists for these inputs (sin B > 1)."); return; }
+          B = toDeg(Math.asin(sinB));
+          A = 180 - B - C;
+          a = (c * Math.sin(toRad(A))) / Math.sin(toRad(C));
+        } else if (a && c && A) {
+          let sinC = (c * Math.sin(toRad(A))) / a;
+          if (sinC > 1) { showError("No valid triangle exists for these inputs (sin C > 1)."); return; }
+          C = toDeg(Math.asin(sinC));
+          B = 180 - A - C;
+          b = (a * Math.sin(toRad(B))) / Math.sin(toRad(A));
+        } else if (a && c && C) {
+          let sinA = (a * Math.sin(toRad(C))) / c;
+          if (sinA > 1) { showError("No valid triangle exists for these inputs (sin A > 1)."); return; }
+          A = toDeg(Math.asin(sinA));
+          B = 180 - A - C;
+          b = (c * Math.sin(toRad(B))) / Math.sin(toRad(C));
+        }
+        steps.push(`Calculated missing values via Sine Rule.`);
+      }
+
+      let areaTrig = 0.5 * a * b * Math.sin(toRad(C));
+      let heightOnA = (2 * areaTrig) / a;
+      let isRight = Math.abs(A - 90) < 0.1 || Math.abs(B - 90) < 0.1 || Math.abs(C - 90) < 0.1;
+
+      steps.push(`<strong>Area Calculation:</strong> Applied Area = ½ × a × b × sin(C) = <strong>${areaTrig.toFixed(3)}</strong>.`);
+      steps.push(`<strong>Perpendicular Height on base a:</strong> h<sub>a</sub> = (2 × Area) / a = <strong>${heightOnA.toFixed(3)}</strong>.`);
+
+      highlightSolvedField('a', a, userInputs.a);
+      highlightSolvedField('b', b, userInputs.b);
+      highlightSolvedField('c', c, userInputs.c);
+      highlightSolvedField('A', A, userInputs.A);
+      highlightSolvedField('B', B, userInputs.B);
+      highlightSolvedField('C', C, userInputs.C);
+
+      renderOutputs(a, b, c, A, B, C, areaTrig, heightOnA, isRight, userInputs);
+
+      document.getElementById('stepsList').innerHTML = steps.map(s => `<li>${s}</li>`).join('');
+      drawDynamicTriangle(a, b, c, A, B, C);
+
+    } catch (err) {
+      showError("Math Engine Error: " + err.message);
+    }
+  }
+
+  function highlightSolvedField(id, val, originalVal) {
+    const input = document.getElementById('input-' + id);
+    const badge = document.getElementById('badge-' + id);
+    const rounded = (id === id.toUpperCase()) ? val.toFixed(1) : parseFloat(val.toPrecision(4));
+
+    input.value = rounded;
+    if (originalVal === null) {
+      input.classList.add('calculated');
+      badge.style.display = 'inline-block';
+    } else {
+      input.classList.remove('calculated');
+      badge.style.display = 'none';
+    }
+  }
+
+  function renderOutputs(a, b, c, A, B, C, area, hA, isRight, original) {
+    const tag = (key) => original[key] === null ? `<span class="inline-solved">[SOLVED]</span>` : '';
+
+    document.getElementById('out-sides').innerHTML = `
+      Side a: <span class="val-highlight">${fmtSigFig(a)}</span> <span class="val-raw">(${a.toFixed(4)})</span>${tag('a')}
+      Side b: <span class="val-highlight">${fmtSigFig(b)}</span> <span class="val-raw">(${b.toFixed(4)})</span>${tag('b')}
+      Side c: <span class="val-highlight">${fmtSigFig(c)}</span> <span class="val-raw">(${c.toFixed(4)})</span>${tag('c')}
+    `;
+
+    document.getElementById('out-angles').innerHTML = `
+      ∠A: <span class="val-highlight">${fmtAngle(A)}</span> <span class="val-raw">(${A.toFixed(3)}°)</span>${tag('A')}
+      ∠B: <span class="val-highlight">${fmtAngle(B)}</span> <span class="val-raw">(${B.toFixed(3)}°)</span>${tag('B')}
+      ∠C: <span class="val-highlight">${fmtAngle(C)}</span> <span class="val-raw">(${C.toFixed(3)}°)</span>${tag('C')}
+    `;
+
+    let badge = isRight 
+      ? `<br><div class="tag-right-angle">✓ Right-Angled Triangle (Pythagoras & SOH CAH TOA Verified)</div>` 
+      : '';
+
+    document.getElementById('out-area').innerHTML = `
+      Total Area: <span class="val-highlight">${fmtSigFig(area)}</span> sq units <span class="val-raw">(${area.toFixed(4)})</span><span class="inline-solved">[SOLVED]</span> | 
+      Perp. Height on a (h<sub>a</sub>): <span class="val-highlight">${fmtSigFig(hA)}</span>
+      ${badge}
+    `;
+  }
+
+  // --- DYNAMIC GEOMETRIC SVG ENGINE WITH ANGLE ARCS ---
+  function drawDynamicTriangle(a, b, c, A, B, C) {
+    const svg = document.getElementById('triangleSvg');
+
+    let radB = toRad(B);
+    let Ax = c * Math.cos(radB);
+    let Ay = c * Math.sin(radB);
+    let Bx = 0, By = 0;
+    let Cx = a, Cy = 0;
+
+    let minX = Math.min(0, a, Ax);
+    let maxX = Math.max(0, a, Ax);
+    let maxY = Ay;
+
+    let shapeW = maxX - minX;
+    let shapeH = maxY;
+
+    let padX = 70;
+    let padY = 55;
+    let targetW = 460 - (padX * 2);
+    let targetH = 290 - (padY * 2);
+
+    let scale = Math.min(targetW / shapeW, targetH / shapeH);
+
+    let offsetX = padX + (targetW - shapeW * scale) / 2 - minX * scale;
+    let offsetY = 290 - padY - (targetH - shapeH * scale) / 2;
+
+    let pB = { x: offsetX + Bx * scale, y: offsetY - By * scale };
+    let pC = { x: offsetX + Cx * scale, y: offsetY - Cy * scale };
+    let pA = { x: offsetX + Ax * scale, y: offsetY - Ay * scale };
+
+    // Function to calculate side label offset pushed OUTWARD from the triangle
+    function getOutwardPoint(p1, p2, pOpposite, dist = 26) {
+      let midX = (p1.x + p2.x) / 2;
+      let midY = (p1.y + p2.y) / 2;
+      let vx = midX - pOpposite.x;
+      let vy = midY - pOpposite.y;
+      let len = Math.hypot(vx, vy);
+      if (len === 0) return { x: midX, y: midY + dist };
+      return {
+        x: midX + (vx / len) * dist,
+        y: midY + (vy / len) * dist
+      };
+    }
+
+    let posA = getOutwardPoint(pB, pC, pA, 25);
+    let posB = getOutwardPoint(pA, pC, pB, 28);
+    let posC = getOutwardPoint(pA, pB, pC, 28);
+
+    // Function to generate mathematically accurate interior angle arcs
+    function renderAngleArc(v, p1, p2, radius = 24) {
+      let v1x = p1.x - v.x, v1y = p1.y - v.y;
+      let v2x = p2.x - v.x, v2y = p2.y - v.y;
+      let len1 = Math.hypot(v1x, v1y);
+      let len2 = Math.hypot(v2x, v2y);
+      if (len1 === 0 || len2 === 0) return '';
+
+      let r = Math.min(radius, len1 * 0.35, len2 * 0.35);
+
+      let u1x = v1x / len1, u1y = v1y / len1;
+      let u2x = v2x / len2, u2y = v2y / len2;
+
+      let sX = v.x + u1x * r;
+      let sY = v.y + u1y * r;
+      let eX = v.x + u2x * r;
+      let eY = v.y + u2y * r;
+
+      let cross = u1x * u2y - u1y * u2x;
+      let sweep = cross > 0 ? 1 : 0;
+
+      return `
+        <!-- Interior Translucent Wedge -->
+        <path d="M ${v.x} ${v.y} L ${sX} ${sY} A ${r} ${r} 0 0 ${sweep} ${eX} ${eY} Z" 
+              fill="rgba(0, 229, 255, 0.12)" stroke="none"/>
+        <!-- Glowing Arc Outline -->
+        <path d="M ${sX} ${sY} A ${r} ${r} 0 0 ${sweep} ${eX} ${eY}" 
+              fill="none" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" 
+              filter="drop-shadow(0 0 3px rgba(0, 229, 255, 0.8))"/>
+      `;
+    }
+
+    // Right-angle marker vs Glowing Angle Arc logic
+    let angleIndicatorsHtml = '';
+    const squareSize = 16;
+
+    // Vertex B
+    if (Math.abs(B - 90) < 0.1) {
+      angleIndicatorsHtml += `<path d="M ${pB.x} ${pB.y - squareSize} L ${pB.x + squareSize} ${pB.y - squareSize} L ${pB.x + squareSize} ${pB.y}" fill="none" stroke="#ffd166" stroke-width="2.5"/>`;
+    } else {
+      angleIndicatorsHtml += renderAngleArc(pB, pC, pA, 24);
+    }
+
+    // Vertex C
+    if (Math.abs(C - 90) < 0.1) {
+      angleIndicatorsHtml += `<path d="M ${pC.x} ${pC.y - squareSize} L ${pC.x - squareSize} ${pC.y - squareSize} L ${pC.x - squareSize} ${pC.y}" fill="none" stroke="#ffd166" stroke-width="2.5"/>`;
+    } else {
+      angleIndicatorsHtml += renderAngleArc(pC, pB, pA, 24);
+    }
+
+    // Vertex A
+    if (Math.abs(A - 90) < 0.1) {
+      let v1 = { x: (pB.x - pA.x), y: (pB.y - pA.y) };
+      let v2 = { x: (pC.x - pA.x), y: (pC.y - pA.y) };
+      let len1 = Math.hypot(v1.x, v1.y), len2 = Math.hypot(v2.x, v2.y);
+      let u1 = { x: (v1.x / len1) * squareSize, y: (v1.y / len1) * squareSize };
+      let u2 = { x: (v2.x / len2) * squareSize, y: (v2.y / len2) * squareSize };
+      let pCorner = { x: pA.x + u1.x + u2.x, y: pA.y + u1.y + u2.y };
+      angleIndicatorsHtml += `<path d="M ${pA.x + u1.x} ${pA.y + u1.y} L ${pCorner.x} ${pCorner.y} L ${pA.x + u2.x} ${pA.y + u2.y}" fill="none" stroke="#ffd166" stroke-width="2.5"/>`;
+    } else {
+      angleIndicatorsHtml += renderAngleArc(pA, pB, pC, 24);
+    }
+
+    svg.innerHTML = `
+      <!-- Glowing Triangle Outline -->
+      <polygon points="${pA.x},${pA.y} ${pB.x},${pB.y} ${pC.x},${pC.y}" 
+               fill="rgba(0, 229, 255, 0.04)" stroke="#00e5ff" stroke-width="2.5" stroke-linejoin="round"/>
+
+      <!-- Interior Angle Arcs & Markers -->
+      ${angleIndicatorsHtml}
+
+      <!-- Vertex Points -->
+      <circle cx="${pA.x}" cy="${pA.y}" r="5" fill="#ffffff" stroke="#00e5ff" stroke-width="2"/>
+      <circle cx="${pB.x}" cy="${pB.y}" r="5" fill="#ffffff" stroke="#00e5ff" stroke-width="2"/>
+      <circle cx="${pC.x}" cy="${pC.y}" r="5" fill="#ffffff" stroke="#00e5ff" stroke-width="2"/>
+
+      <!-- Vertex Labels (Pushed Outward) -->
+      <text x="${pA.x}" y="${pA.y - 18}" class="diag-vertex">A (${fmtAngle(A)})</text>
+      <text x="${pB.x - 24}" y="${pB.y + 16}" class="diag-vertex">B (${fmtAngle(B)})</text>
+      <text x="${pC.x + 24}" y="${pC.y + 16}" class="diag-vertex">C (${fmtAngle(C)})</text>
+
+      <!-- Side Length Labels (Positioned Outside) -->
+      <text x="${posA.x}" y="${posA.y}" class="diag-label">a = ${fmtSigFig(a)}</text>
+      <text x="${posB.x}" y="${posB.y}" class="diag-label">b = ${fmtSigFig(b)}</text>
+      <text x="${posC.x}" y="${posC.y}" class="diag-label">c = ${fmtSigFig(c)}</text>
+    `;
+  }
+</script>
+</body>
+</html>
